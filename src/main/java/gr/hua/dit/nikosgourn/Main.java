@@ -2,7 +2,9 @@ package gr.hua.dit.nikosgourn;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -16,9 +18,12 @@ public class Main
 {
 	public static void main(String[] args) throws InterruptedException
 	{
-		Path filepath = check_arg(args);
+		check_arg(args);
+		Path filepath = get_path_arg(args);
+		String[] command = get_command_arg(args);
 		//		System.out.println(filepath);
 		FileTime last_modified_prev = null;
+		Process proc = null;
 		if (! Files.exists(filepath))
 		{
 			System.out.printf("No such file: \"%s\"\n" , filepath);
@@ -41,8 +46,27 @@ public class Main
 			
 			if (last_modified_prev != null && ! last_modified_prev.equals(last_modified))
 			{
-				System.out.printf("File was modified!\nModified on:      %s\nLast modified on: %s\n" ,
+				System.out.printf("File was modified: %s\nModified on:      %s\nLast modified on: %s\n" , filepath ,
 				                  UTC_to_local(last_modified.toString()) , UTC_to_local(last_modified_prev.toString()));
+				try
+				{
+					if (proc != null)
+					{
+						proc.destroy();
+					}
+					
+					proc = new ProcessBuilder(command).start();
+					BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+					String line;
+					while ((line = reader.readLine()) != null)
+					{
+						System.out.println(line);
+					}
+					//					proc.waitFor();
+				} catch (IOException e)
+				{
+					throw new RuntimeException(e);
+				}
 			}
 			//			System.out.println("File: \"" + filepath + "\"\nLast Modified On: " + last_modified);
 			//			System.out.println("-".repeat(50));
@@ -72,7 +96,7 @@ public class Main
 		return date_time_utc.atZone(ZoneId.systemDefault()).format(localFormat);
 	}
 	
-	private static Path check_arg(String[] args)
+	private static void check_arg(String[] args)
 	{
 		final String USAGE_MSG = "usage:\n\t OnFileUpdate <file> <command>";
 		if (args == null)
@@ -80,16 +104,31 @@ public class Main
 			System.out.println(USAGE_MSG);
 			System.exit(1);
 		}
-		if (args.length != 2)
+		if (args.length < 2)
 		{
 			System.out.println(USAGE_MSG);
 			System.exit(1);
 		}
+	}
+	
+	private static Path get_path_arg(String[] args)
+	{
 		if (args[0].startsWith("/"))
 		{
 			return Path.of(args[0]);
 		}
-		
 		return Path.of(System.getProperty("user.dir") , args[0]);
+	}
+	
+	private static String[] get_command_arg(String[] args)
+	{
+		String[] command = new String[args.length - 1];
+		
+		for (int i = 0; i < command.length; i++)
+		{
+			command[i] = args[i + 1];
+		}
+		
+		return command;
 	}
 }
