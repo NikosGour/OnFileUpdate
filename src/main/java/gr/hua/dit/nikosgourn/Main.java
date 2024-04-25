@@ -13,6 +13,8 @@ import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Main
 {
@@ -58,18 +60,25 @@ public class Main
 					proc = new ProcessBuilder(command).start();
 					BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
 					String line;
+					System.out.println("-".repeat(70));
 					while ((line = reader.readLine()) != null)
 					{
 						System.out.println(line);
 					}
+					System.out.println("-".repeat(70));
 					//					proc.waitFor();
 				} catch (IOException e)
 				{
-					throw new RuntimeException(e);
+					final Pattern NO_SUCH_COMMAND = Pattern.compile("Cannot run program \".+? error=2");
+					if (NO_SUCH_COMMAND.matcher(e.getMessage()).find())
+					{
+						System.out.printf("No such program exist: `%s`\n" , String.join(" " , command));
+					} else
+					{
+						throw new RuntimeException(e);
+					}
 				}
 			}
-			//			System.out.println("File: \"" + filepath + "\"\nLast Modified On: " + last_modified);
-			//			System.out.println("-".repeat(50));
 			last_modified_prev = last_modified;
 			Thread.sleep(1000);
 		}
@@ -79,9 +88,6 @@ public class Main
 	{
 		BasicFileAttributes attr = Files.readAttributes(filepath , BasicFileAttributes.class);
 		FileTime last_modified = attr.lastModifiedTime();
-		//		System.out.println(last_modified);
-		//		String last_modified_local = UTC_to_local(last_modified.toString());
-		//		System.out.println("File: \"" + filepath + "\"\nLast Modified On: " + last_modified_local);
 		return last_modified;
 	}
 	
